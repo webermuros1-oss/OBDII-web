@@ -21,9 +21,6 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      - name: Generate icons
-        run: node build/generate-icons.js
-
       - name: Build Windows
         run: npm run dist:win
         env:
