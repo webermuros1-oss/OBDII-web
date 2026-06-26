@@ -1,0 +1,67 @@
+appId: com.obdii.diagnostics
+productName: OBDII Diagnostics
+copyright: Copyright © 2024 OBDII Diagnostics
+
+directories:
+  output: release/${version}
+  buildResources: build
+
+files:
+  - dist/**
+  - dist-electron/**
+  - "!dist-electron/**/*.map"
+  - node_modules/**
+  - "!node_modules/.bin"
+  - package.json
+
+extraResources:
+  - from: node_modules/sql.js/dist/sql-wasm.wasm
+    to: sql-wasm.wasm
+  - from: electron/data/dtc-codes.json
+    to: dtc-codes.json
+
+win:
+  target:
+    - target: nsis
+      arch:
+        - x64
+  artifactName: "${productName}-${version}-Setup.exe"
+
+mac:
+  target:
+    - target: dmg
+      arch:
+        - x64
+        - arm64
+  category: public.app-category.utilities
+  artifactName: "${productName}-${version}.dmg"
+
+linux:
+  target:
+    - target: AppImage
+      arch:
+        - x64
+  category: Utility
+
+nsis:
+  oneClick: false
+  perMachine: false
+  allowToChangeInstallationDirectory: true
+  createDesktopShortcut: always
+  createStartMenuShortcut: true
+  shortcutName: OBDII Diagnostics
+
+dmg:
+  title: OBDII Diagnostics ${version}
+  window:
+    width: 540
+    height: 380
+  contents:
+    - x: 130
+      y: 220
+    - x: 410
+      y: 220
+      type: link
+      path: /Applications
+
+publish: null

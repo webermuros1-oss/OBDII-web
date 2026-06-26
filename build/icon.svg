@@ -1,0 +1,31 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256">
+  <!-- Background -->
+  <rect width="256" height="256" rx="48" fill="#0f172a"/>
+
+  <!-- Outer ring -->
+  <circle cx="128" cy="128" r="96" fill="none" stroke="#1e293b" stroke-width="8"/>
+
+  <!-- Speedometer arc (background) -->
+  <path d="M 50 170 A 88 88 0 1 1 206 170" fill="none" stroke="#1e293b" stroke-width="16" stroke-linecap="round"/>
+
+  <!-- Speedometer arc (active - green) -->
+  <path d="M 50 170 A 88 88 0 0 1 128 40" fill="none" stroke="#22c55e" stroke-width="16" stroke-linecap="round"/>
+
+  <!-- Center dot -->
+  <circle cx="128" cy="128" r="8" fill="#22c55e"/>
+
+  <!-- Needle -->
+  <line x1="128" y1="128" x2="128" y2="52" stroke="#f8fafc" stroke-width="4" stroke-linecap="round"/>
+
+  <!-- OBD connector dots (bottom) -->
+  <rect x="96" y="198" width="64" height="32" rx="6" fill="#1e293b"/>
+  <circle cx="112" cy="210" r="3" fill="#22c55e"/>
+  <circle cx="128" cy="210" r="3" fill="#22c55e"/>
+  <circle cx="144" cy="210" r="3" fill="#22c55e"/>
+  <circle cx="112" cy="222" r="3" fill="#22c55e"/>
+  <circle cx="128" cy="222" r="3" fill="#22c55e"/>
+  <circle cx="144" cy="222" r="3" fill="#22c55e"/>
+
+  <!-- Text -->
+  <text x="128" y="158" font-family="monospace" font-size="18" font-weight="bold" fill="#22c55e" text-anchor="middle">OBD2</text>
+</svg>
