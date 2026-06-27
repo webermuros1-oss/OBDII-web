@@ -27,6 +27,21 @@ export function ConnectionPanel() {
 
   const isConnected = connectionStatus === 'connected'
 
+  const isObdPort = (p: PortInfoDTO) => {
+    const name = (p.path + (p.manufacturer ?? '')).toLowerCase()
+    return name.includes('obd') || name.includes('elm') || name.includes('bluetooth') || name.includes('bt') || name.includes('obdii') || p.path.includes('cu.')
+  }
+
+  const sortedPorts = [...ports].sort((a, b) => (isObdPort(b) ? 1 : 0) - (isObdPort(a) ? 1 : 0))
+
+  const recommendedPort = sortedPorts.find(isObdPort)
+
+  useEffect(() => {
+    if (recommendedPort && !selectedPort) {
+      setSelectedPort(recommendedPort.path)
+    }
+  }, [ports])
+
   return (
     <div className="space-y-3">
       <div className="flex items-center justify-between">
@@ -48,13 +63,18 @@ export function ConnectionPanel() {
         className="w-full bg-gray-800 border border-gray-700 rounded px-2 py-1.5 text-sm text-gray-200 disabled:opacity-50 focus:outline-none focus:ring-1 focus:ring-green-500"
       >
         <option value="">Seleccionar puerto</option>
-        {ports.map((p) => (
+        {sortedPorts.map((p) => (
           <option key={p.path} value={p.path}>
-            {p.path}
-            {p.manufacturer ? ` (${p.manufacturer})` : ''}
+            {isObdPort(p) ? '★ ' : ''}{p.path}{p.manufacturer ? ` (${p.manufacturer})` : ''}{isObdPort(p) ? ' — Recomendado' : ''}
           </option>
         ))}
       </select>
+      {ports.length === 0 && (
+        <p className="text-xs text-yellow-500">No se detectan puertos. Asegúrate de que el adaptador está emparejado por Bluetooth.</p>
+      )}
+      {recommendedPort && (
+        <p className="text-xs text-green-500">✓ Adaptador OBD-II detectado</p>
+      )}
 
       {/* Baudrate */}
       <select
