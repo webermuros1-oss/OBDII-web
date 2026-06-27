@@ -14,9 +14,20 @@ export function useOBDConnection() {
   }, [])
 
   const listPorts = () => window.obd.listPorts()
+
   const connect = (port: string, baudRate: 9600 | 38400 | 115200) =>
     window.obd.connect({ port, baudRate })
+
+  const autoConnect = async (port: string): Promise<boolean> => {
+    for (const baud of [38400, 115200, 9600] as const) {
+      const result = await window.obd.connect({ port, baudRate: baud })
+      if (result.ok) return true
+      await window.obd.disconnect()
+    }
+    return false
+  }
+
   const disconnect = () => window.obd.disconnect()
 
-  return { listPorts, connect, disconnect }
+  return { listPorts, connect, autoConnect, disconnect }
 }
