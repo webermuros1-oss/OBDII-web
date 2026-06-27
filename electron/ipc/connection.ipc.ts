@@ -39,7 +39,7 @@ export function registerConnectionHandlers(): void {
         const SKIP = ['debug-console', 'Bluetooth-Incoming-Port']
         const btPorts = readdirSync('/dev')
           .filter((f) => f.startsWith('cu.') && !SKIP.some((s) => f.includes(s)))
-          .map((f) => ({ path: `/dev/${f}`, manufacturer: 'Bluetooth' }))
+          .map((f) => ({ path: `/dev/${f}`, manufacturer: 'Bluetooth', pnpId: undefined, serialNumber: undefined }))
         for (const bp of btPorts) {
           if (!result.find((p) => p.path === bp.path)) {
             result.push(bp)
