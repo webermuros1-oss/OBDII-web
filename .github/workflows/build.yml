@@ -70,7 +70,7 @@ jobs:
         uses: softprops/action-gh-release@v2
         with:
           files: |
-            windows-installer/*.exe
-            macos-dmg/*.dmg
+            windows-installer/**/*.exe
+            macos-dmg/**/*.dmg
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
