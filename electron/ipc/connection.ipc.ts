@@ -1,5 +1,6 @@
 import { ipcMain, BrowserWindow } from 'electron'
 import { SerialPort } from 'serialport'
+import { readdirSync } from 'fs'
 import { ELM327 } from '../obd/elm327'
 import { ok, err } from '../obd/dto/connection.dto'
 
@@ -26,14 +27,27 @@ export function registerConnectionHandlers(): void {
   ipcMain.handle('obd:listPorts', async () => {
     try {
       const ports = await SerialPort.list()
-      return ok(
-        ports.map((p) => ({
-          path: p.path,
-          manufacturer: p.manufacturer,
-          pnpId: p.pnpId,
-          serialNumber: p.serialNumber,
-        })),
-      )
+      const result = ports.map((p) => ({
+        path: p.path,
+        manufacturer: p.manufacturer,
+        pnpId: p.pnpId,
+        serialNumber: p.serialNumber,
+      }))
+
+      // On macOS, SerialPort.list() misses Bluetooth serial ports — scan /dev/cu.* manually
+      if (process.platform === 'darwin') {
+        const SKIP = ['debug-console', 'Bluetooth-Incoming-Port']
+        const btPorts = readdirSync('/dev')
+          .filter((f) => f.startsWith('cu.') && !SKIP.some((s) => f.includes(s)))
+          .map((f) => ({ path: `/dev/${f}`, manufacturer: 'Bluetooth' }))
+        for (const bp of btPorts) {
+          if (!result.find((p) => p.path === bp.path)) {
+            result.push(bp)
+          }
+        }
+      }
+
+      return ok(result)
     } catch (e) {
       return err('SERIAL_ERROR', String(e))
     }
