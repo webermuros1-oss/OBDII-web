@@ -1,18 +1,19 @@
 import { useEffect } from 'react'
 import { useOBDStore } from '../store/obdStore'
+import { obd } from '../lib/obd'
 
 export function SessionHistory() {
   const { sessions, setSessions } = useOBDStore()
 
   useEffect(() => {
-    window.obd.getSessions().then((r) => {
+    obd.listSessions().then((r) => {
       if (r.ok) setSessions(r.data)
     })
   }, [])
 
   const handleDelete = async (id: number) => {
     if (!window.confirm('¿Eliminar esta sesión?')) return
-    const result = await window.obd.deleteSession(id)
+    const result = await obd.deleteSession(id)
     if (result.ok) setSessions(sessions.filter((s) => s.id !== id))
   }
 

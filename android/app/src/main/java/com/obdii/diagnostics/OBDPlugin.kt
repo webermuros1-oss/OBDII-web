@@ -92,13 +92,25 @@ class OBDPlugin : Plugin() {
     @PluginMethod
     fun listDevices(call: PluginCall) {
         if (!hasBluetoothPermission()) {
-            call.reject("PERMISSION_DENIED", "Bluetooth permission not granted")
+            requestAllPermissions(call, "bluetoothListPermsCallback")
             return
         }
+        performListDevices(call)
+    }
 
+    @PermissionCallback
+    fun bluetoothListPermsCallback(call: PluginCall) {
+        if (!hasBluetoothPermission()) {
+            call.reject("PERMISSION_DENIED", "Bluetooth permission was denied")
+            return
+        }
+        performListDevices(call)
+    }
+
+    private fun performListDevices(call: PluginCall) {
         val adapter = bluetoothAdapter
         if (adapter == null || !adapter.isEnabled) {
-            call.reject("BLUETOOTH_DISABLED", "Bluetooth is not available or not enabled")
+            call.reject("BLUETOOTH_DISABLED", "Bluetooth no disponible o desactivado")
             return
         }
 
@@ -111,11 +123,11 @@ class OBDPlugin : Plugin() {
                 @Suppress("MissingPermission")
                 obj.put("address", device.address ?: "")
                 @Suppress("MissingPermission")
-                obj.put("name", device.name ?: "Unknown")
+                obj.put("name", device.name ?: "Desconocido")
                 devicesArray.put(obj)
             }
         } catch (e: SecurityException) {
-            call.reject("PERMISSION_DENIED", "Missing Bluetooth permission: ${e.message}")
+            call.reject("PERMISSION_DENIED", "Permiso Bluetooth denegado: ${e.message}")
             return
         }
 
@@ -134,7 +146,7 @@ class OBDPlugin : Plugin() {
 
         if (!hasBluetoothPermission()) {
             pendingConnectCall = call
-            requestPermissions(call)
+            requestAllPermissions(call, "bluetoothConnectPermsCallback")
             return
         }
 

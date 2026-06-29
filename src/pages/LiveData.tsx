@@ -31,7 +31,7 @@ export function LiveData() {
               : 'bg-green-600/20 text-green-400'
           }`}
         >
-          {isPolling ? '⏸ Parar polling' : '▶ Iniciar polling'}
+          {isPolling ? '⏸ Detener' : '▶ Iniciar lectura'}
         </button>
       )}
 

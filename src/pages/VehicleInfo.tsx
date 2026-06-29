@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { useOBDStore } from '../store/obdStore'
+import { obd } from '../lib/obd'
 
 export function VehicleInfo() {
   const { vehicleInfo, setVehicleInfo, connectionStatus } = useOBDStore()
@@ -8,7 +9,7 @@ export function VehicleInfo() {
 
   const loadInfo = async () => {
     setLoading(true)
-    const result = await window.obd.getVehicleInfo()
+    const result = await obd.getVehicleInfo()
     setLoading(false)
     if (result.ok) setVehicleInfo(result.data)
   }
