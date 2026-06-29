@@ -17,25 +17,11 @@ const DashboardIcon = () => (
   </svg>
 )
 
-const LiveIcon = () => (
-  <svg width="22" height="22" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
-    <path d="M2 14 L6 8 L9 11 L13 5 L18 10" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
-    <circle cx="18" cy="10" r="1.5" fill="currentColor" className="animate-pulse" />
-  </svg>
-)
-
 const DTCIcon = () => (
   <svg width="22" height="22" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
     <path d="M10 2 L18 17 H2 Z" stroke="currentColor" strokeWidth="1.5" strokeLinejoin="round" />
     <path d="M10 8 L10 12" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
     <circle cx="10" cy="14.5" r="0.75" fill="currentColor" />
-  </svg>
-)
-
-const HistoryIcon = () => (
-  <svg width="22" height="22" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
-    <circle cx="10" cy="10" r="8" stroke="currentColor" strokeWidth="1.5" />
-    <path d="M10 6 L10 10 L13 12" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
   </svg>
 )
 
@@ -48,11 +34,27 @@ const VehicleIcon = () => (
   </svg>
 )
 
+const ITVIcon = () => (
+  <svg width="22" height="22" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
+    <circle cx="10" cy="10" r="8" stroke="currentColor" strokeWidth="1.5" />
+    <path d="M6 10 L8.5 12.5 L14 7.5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+  </svg>
+)
+
+const ReportIcon = () => (
+  <svg width="22" height="22" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
+    <rect x="4" y="2" width="12" height="16" rx="2" stroke="currentColor" strokeWidth="1.5" />
+    <path d="M7 7 H13" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+    <path d="M7 10 H13" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+    <path d="M7 13 H10" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+  </svg>
+)
+
 const NAV_ITEMS = [
   { to: '/dashboard', label: 'Dashboard', shortLabel: 'Dash', Icon: DashboardIcon },
-  { to: '/live', label: 'Datos en vivo', shortLabel: 'Live', Icon: LiveIcon },
   { to: '/dtc', label: 'Códigos DTC', shortLabel: 'DTC', Icon: DTCIcon },
-  { to: '/history', label: 'Historial', shortLabel: 'Historial', Icon: HistoryIcon },
+  { to: '/itv', label: 'ITV', shortLabel: 'ITV', Icon: ITVIcon },
+  { to: '/report', label: 'Informe', shortLabel: 'Informe', Icon: ReportIcon },
   { to: '/vehicle', label: 'Vehículo', shortLabel: 'Vehículo', Icon: VehicleIcon },
 ]
 
