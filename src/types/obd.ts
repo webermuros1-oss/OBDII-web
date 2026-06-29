@@ -76,6 +76,7 @@ export interface VehicleInfoDTO {
   ecuCount: number
   obdStandard: string
   manufacturer?: string
+  fuelType?: 'Gasolina' | 'Diésel' | 'Híbrido' | 'Eléctrico'
 }
 
 // ─── DTOs de Sesión ──────────────────────────────────────────────────────────
