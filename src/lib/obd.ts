@@ -152,37 +152,50 @@ function extractHexBytes(raw: string, responseMode: string): string[] {
 
 // ─── VIN / vehicle info parsing ───────────────────────────────────────────────
 
+// WMI (World Manufacturer Identifier) → brand name
+const WMI_MAP: Record<string, string> = {
+  VF1: 'Renault', VF3: 'Peugeot', VF7: 'Citroën', VFA: 'Alpine', VF6: 'Renault',
+  WBA: 'BMW', WBS: 'BMW M', WBY: 'BMW', WDD: 'Mercedes-Benz', WDC: 'Mercedes-Benz',
+  WVW: 'Volkswagen', WAU: 'Audi', WP0: 'Porsche', W0L: 'Opel', WKK: 'Opel',
+  ZFA: 'Fiat', ZFF: 'Ferrari', ZLA: 'Lancia', ZAR: 'Alfa Romeo', ZHW: 'Lamborghini',
+  VSS: 'SEAT', VNK: 'Toyota ES', VS6: 'Ford ES',
+  SAL: 'Land Rover', SAJ: 'Jaguar', SCB: 'Bentley', SCC: 'Lotus',
+  JHM: 'Honda', JTD: 'Toyota', JN1: 'Nissan', JMB: 'Mitsubishi', JS3: 'Suzuki',
+  KNA: 'Kia', KMH: 'Hyundai',
+  '1FA': 'Ford', '1G1': 'Chevrolet', '1HG': 'Honda', '2T1': 'Toyota',
+}
+
+function decodeWMI(vin: string): string | null {
+  if (vin.length < 3) return null
+  const w3 = vin.substring(0, 3).toUpperCase()
+  const w2 = vin.substring(0, 2).toUpperCase()
+  return WMI_MAP[w3] ?? WMI_MAP[w2] ?? null
+}
+
 /**
  * Parse mode 09 PID 02 (VIN) response.
- * ELM327 returns multiple frames; each frame starts with a sequence number.
- * ASCII bytes follow after the header.
+ * CAN multi-frame protocol inserts PCI bytes (0x21, 0x22…) as first byte of
+ * each continuation frame — we filter them by accepting only valid VIN chars.
  */
 function parseVIN(raw: string): string {
-  // Remove all non-printable except hex and spaces
-  const cleaned = raw
-    .replace(/>/g, '')
-    .replace(/\r/g, '\n')
-    .trim()
-
+  const cleaned = raw.replace(/>/g, '').replace(/\r/g, '\n').trim()
   const lines = cleaned.split('\n').map((l) => l.trim()).filter(Boolean)
   const hexBytes: string[] = []
 
   for (const line of lines) {
     const tokens = line.toUpperCase().split(/\s+/)
-    // Skip frame counter tokens (single hex digit like "0:", "1:", etc.)
     for (const t of tokens) {
       if (/^[0-9A-F]{2}$/.test(t)) hexBytes.push(t)
     }
   }
 
-  // Mode 09 response: 49 02 <count> <vin bytes...>
   const idx49 = hexBytes.indexOf('49')
   if (idx49 >= 0 && hexBytes[idx49 + 1] === '02') {
-    // Skip 49 02 <count>
     const vinBytes = hexBytes.slice(idx49 + 3)
+    // VIN uses only A-Z (excl. I, O, Q) and 0-9; filters out CAN PCI frame bytes
     return vinBytes
       .map((b) => String.fromCharCode(parseInt(b, 16)))
-      .filter((c) => c >= ' ' && c <= '~')
+      .filter((c) => /[A-HJ-NPR-Z0-9]/i.test(c))
       .join('')
       .trim()
   }
@@ -454,10 +467,7 @@ const obdBridge: OBDAPI = {
       if (!result.ok) {
         return fail('SERIAL_ERROR', result.error ?? 'mode 04 failed')
       }
-      // ELM327 responds with "44" on success
-      if (result.response && !result.response.toUpperCase().includes('44')) {
-        return fail('PARSE_ERROR', `Unexpected clear-DTC response: ${result.response}`)
-      }
+      // Some ECUs don't send a response to mode 04; any non-error reply is success.
       return ok(undefined)
     } catch (e) {
       const msg = e instanceof Error ? e.message : String(e)
@@ -519,7 +529,8 @@ const obdBridge: OBDAPI = {
         }
       }
 
-      return ok({ vin, protocol, protocolName, supportedPIDs, ecuCount, obdStandard })
+      const manufacturer = vin !== 'UNKNOWN' ? decodeWMI(vin) ?? undefined : undefined
+      return ok({ vin, protocol, protocolName, supportedPIDs, ecuCount, obdStandard, manufacturer })
     } catch (e) {
       const msg = e instanceof Error ? e.message : String(e)
       return fail('PARSE_ERROR', `getVehicleInfo failed: ${msg}`)

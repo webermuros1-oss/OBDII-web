@@ -6,6 +6,36 @@ import { obd } from '../lib/obd'
 
 const FUEL_OPTIONS: VehicleProfile['fuel'][] = ['Gasolina', 'Diésel', 'Híbrido', 'Eléctrico']
 
+const PID_NAMES: Record<string, string> = {
+  '01': 'Estado del motor y MIL',
+  '03': 'Estado del combustible',
+  '04': 'Carga del motor',
+  '05': 'Temp. refrigerante',
+  '06': 'Trim combustible (corto)',
+  '07': 'Trim combustible (largo)',
+  '0B': 'Presión de admisión',
+  '0C': 'Régimen del motor (RPM)',
+  '0D': 'Velocidad',
+  '0E': 'Avance de encendido',
+  '0F': 'Temp. aire admisión',
+  '10': 'Flujo de aire (MAF)',
+  '11': 'Posición del acelerador',
+  '13': 'Sensores de oxígeno',
+  '1C': 'Norma OBD del vehículo',
+  '1F': 'Tiempo desde arranque',
+  '20': 'Sensores PIDs 21-40',
+  '21': 'Dist. con MIL encendido',
+  '2F': 'Nivel de combustible',
+  '31': 'Dist. desde borrado DTCs',
+  '33': 'Presión barométrica',
+  '42': 'Voltaje batería',
+  '46': 'Temp. ambiente',
+}
+
+function pidName(pid: string): string {
+  return PID_NAMES[pid.toUpperCase()] ?? `Sensor 0x${pid.toUpperCase()}`
+}
+
 function ProfileForm() {
   const { profile, setProfile } = useVehicleProfileStore()
   const [editing, setEditing] = useState(false)
@@ -30,9 +60,9 @@ function ProfileForm() {
 
         {([
           { key: 'make', label: 'Marca', placeholder: 'ej. Renault' },
-          { key: 'model', label: 'Modelo', placeholder: 'ej. Clio 4' },
-          { key: 'year', label: 'Año', placeholder: 'ej. 2015' },
-          { key: 'engine', label: 'Motor', placeholder: 'ej. 1.2 TCe 120cv' },
+          { key: 'model', label: 'Modelo', placeholder: 'ej. Clio IV' },
+          { key: 'year', label: 'Año', placeholder: 'ej. 2013' },
+          { key: 'engine', label: 'Motor', placeholder: 'ej. 1.5 dCi 90cv' },
         ] as { key: keyof VehicleProfile; label: string; placeholder: string }[]).map(({ key, label, placeholder }) => (
           <div key={key}>
             <label className="text-xs text-gray-400 block mb-1">{label}</label>
@@ -92,7 +122,7 @@ function ProfileForm() {
         <span className="text-2xl">🚗</span>
         <div>
           <p className="text-sm font-medium text-blue-400">Añade los datos de tu coche</p>
-          <p className="text-xs text-gray-500 mt-0.5">Marca, modelo, año y motor para diagnósticos más precisos</p>
+          <p className="text-xs text-gray-500 mt-0.5">Marca, modelo, año y motor</p>
         </div>
         <span className="ml-auto text-gray-500">›</span>
       </button>
@@ -113,10 +143,7 @@ function ProfileForm() {
             </p>
           </div>
         </div>
-        <button
-          onClick={startEdit}
-          className="text-xs text-gray-500 underline"
-        >
+        <button onClick={startEdit} className="text-xs text-gray-500 underline">
           Editar
         </button>
       </div>
@@ -126,6 +153,7 @@ function ProfileForm() {
 
 export function VehicleInfo() {
   const { vehicleInfo, setVehicleInfo, connectionStatus } = useOBDStore()
+  const { profile, setProfile } = useVehicleProfileStore()
   const [loading, setLoading] = useState(false)
   const isConnected = connectionStatus === 'connected'
 
@@ -133,76 +161,120 @@ export function VehicleInfo() {
     setLoading(true)
     const result = await obd.getVehicleInfo()
     setLoading(false)
-    if (result.ok) setVehicleInfo(result.data)
+    if (result.ok) {
+      setVehicleInfo(result.data)
+      // Auto-fill vehicle profile make from VIN if not already set
+      if (result.data.manufacturer && !profile.make) {
+        setProfile({ make: result.data.manufacturer })
+      }
+    }
   }
+
+  const vinClean = vehicleInfo?.vin && vehicleInfo.vin !== 'UNKNOWN' ? vehicleInfo.vin : null
 
   return (
     <div className="space-y-4">
       {/* Vehicle profile (always visible) */}
       <ProfileForm />
 
-      {/* OBD section */}
-      <div className="space-y-3">
-        <p className="text-xs text-gray-500 uppercase tracking-wider font-semibold">Datos OBD en tiempo real</p>
+      {/* OBD read button */}
+      <button
+        onClick={loadInfo}
+        disabled={!isConnected || loading}
+        className="w-full min-h-[44px] py-3 bg-blue-600/20 text-blue-400 disabled:opacity-50 rounded-lg text-sm font-medium"
+      >
+        {loading ? 'Leyendo datos del coche...' : '🔍 Leer datos OBD del vehículo'}
+      </button>
 
-        <button
-          onClick={loadInfo}
-          disabled={!isConnected || loading}
-          className="w-full min-h-[44px] py-3 bg-blue-600/20 text-blue-400 disabled:opacity-50 rounded-lg text-sm font-medium"
-        >
-          {loading ? 'Leyendo...' : '🔍 Leer VIN y protocolo'}
-        </button>
+      {!isConnected && (
+        <p className="text-center text-gray-600 text-sm py-2">
+          Conecta el ELM327 para leer los datos OBD
+        </p>
+      )}
 
-        {!isConnected && (
-          <p className="text-center text-gray-600 text-sm py-4">Conecta el ELM327 para leer los datos OBD</p>
-        )}
+      {/* OBD results */}
+      {vehicleInfo && (
+        <div className="space-y-3">
+          {/* Identification */}
+          <div className="bg-gray-900 border border-gray-800 rounded-xl p-4 space-y-3">
+            <h2 className="text-xs text-gray-400 uppercase tracking-wider font-semibold">
+              Identificación del vehículo
+            </h2>
 
-        {vehicleInfo && (
-          <div className="space-y-3">
-            <div className="bg-gray-900 border border-gray-800 rounded-xl p-3">
-              <h2 className="text-xs text-gray-400 uppercase tracking-wider mb-3">Identificación OBD</h2>
-              <div className="space-y-3 divide-y divide-gray-800">
-                <div className="pt-0">
-                  <p className="text-xs text-gray-400">VIN</p>
-                  <p className="text-sm text-gray-100 font-mono mt-0.5">
-                    {vehicleInfo.vin && vehicleInfo.vin !== 'UNKNOWN' ? vehicleInfo.vin : 'No disponible'}
-                  </p>
-                </div>
-                <div className="pt-3">
-                  <p className="text-xs text-gray-400">Protocolo</p>
-                  <p className="text-sm text-gray-100 mt-0.5">{vehicleInfo.protocolName}</p>
-                </div>
-                <div className="pt-3">
-                  <p className="text-xs text-gray-400">Estándar OBD</p>
-                  <p className="text-sm text-gray-100 mt-0.5">{vehicleInfo.obdStandard}</p>
-                </div>
-                <div className="pt-3">
-                  <p className="text-xs text-gray-400">ECUs detectadas</p>
-                  <p className="text-sm text-gray-100 mt-0.5">{vehicleInfo.ecuCount}</p>
-                </div>
+            {vehicleInfo.manufacturer && (
+              <Row label="Fabricante" value={vehicleInfo.manufacturer} highlight />
+            )}
+
+            {vinClean ? (
+              <Row label="Número de bastidor (VIN)" value={vinClean} mono />
+            ) : (
+              <Row label="Número de bastidor (VIN)" value="No disponible en este vehículo" dim />
+            )}
+
+            <Row
+              label="Protocolo de comunicación"
+              value={vehicleInfo.protocolName.replace('ISO 15765-4 CAN', 'CAN Bus')}
+            />
+
+            <Row
+              label="Norma de diagnóstico"
+              value={
+                vehicleInfo.obdStandard === 'EOBD'
+                  ? 'EOBD (normativa europea)'
+                  : vehicleInfo.obdStandard === 'OBD-II (CARB)'
+                  ? 'OBD-II (normativa americana)'
+                  : vehicleInfo.obdStandard
+              }
+            />
+          </div>
+
+          {/* Supported sensors */}
+          {vehicleInfo.supportedPIDs.length > 0 && (
+            <div className="bg-gray-900 border border-gray-800 rounded-xl p-4">
+              <h2 className="text-xs text-gray-400 uppercase tracking-wider font-semibold mb-3">
+                Sensores disponibles ({vehicleInfo.supportedPIDs.length})
+              </h2>
+              <div className="space-y-1.5">
+                {vehicleInfo.supportedPIDs.map((pid) => (
+                  <div key={pid} className="flex items-center gap-2">
+                    <span className="font-mono text-[10px] text-gray-600 w-8 shrink-0">
+                      {pid}
+                    </span>
+                    <span className="text-sm text-gray-300">{pidName(pid)}</span>
+                  </div>
+                ))}
               </div>
             </div>
+          )}
+        </div>
+      )}
+    </div>
+  )
+}
 
-            {vehicleInfo.supportedPIDs.length > 0 && (
-              <div className="bg-gray-900 border border-gray-800 rounded-xl p-3">
-                <h2 className="text-xs text-gray-400 uppercase tracking-wider mb-3">
-                  PIDs soportados ({vehicleInfo.supportedPIDs.length})
-                </h2>
-                <div className="flex flex-wrap gap-2">
-                  {vehicleInfo.supportedPIDs.map((pid) => (
-                    <span
-                      key={pid}
-                      className="font-mono text-xs bg-gray-800 text-green-400 px-2 py-1 rounded border border-gray-700"
-                    >
-                      0x{pid}
-                    </span>
-                  ))}
-                </div>
-              </div>
-            )}
-          </div>
-        )}
-      </div>
+function Row({
+  label,
+  value,
+  mono,
+  highlight,
+  dim,
+}: {
+  label: string
+  value: string
+  mono?: boolean
+  highlight?: boolean
+  dim?: boolean
+}) {
+  return (
+    <div>
+      <p className="text-xs text-gray-500">{label}</p>
+      <p
+        className={`text-sm mt-0.5 ${
+          highlight ? 'text-green-400 font-semibold' : dim ? 'text-gray-600' : mono ? 'text-gray-100 font-mono' : 'text-gray-200'
+        }`}
+      >
+        {value}
+      </p>
     </div>
   )
 }

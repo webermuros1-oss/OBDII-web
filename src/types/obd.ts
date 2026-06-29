@@ -75,6 +75,7 @@ export interface VehicleInfoDTO {
   supportedPIDs: string[]
   ecuCount: number
   obdStandard: string
+  manufacturer?: string
 }
 
 // ─── DTOs de Sesión ──────────────────────────────────────────────────────────

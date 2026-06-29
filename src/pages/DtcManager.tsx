@@ -1,6 +1,13 @@
+import { useState } from 'react'
 import { useOBDStore } from '../store/obdStore'
+import { useDTCHistoryStore } from '../store/dtcHistoryStore'
 import { useDTC } from '../hooks/useDTC'
 import type { DTCCodeDTO } from '../types/obd'
+
+function openDTCInfo(code: string) {
+  // Opens the system browser with DTC info; _system forces external browser in Capacitor
+  window.open(`https://www.obd-codes.com/${code.toLowerCase()}`, '_system')
+}
 
 function DTCCard({ dtc }: { dtc: DTCCodeDTO }) {
   const badge = dtc.isPermanent ? 'PERMANENTE' : dtc.isPending ? 'PENDIENTE' : 'ACTIVO'
@@ -10,33 +17,95 @@ function DTCCard({ dtc }: { dtc: DTCCodeDTO }) {
     ? 'bg-yellow-500/20 text-yellow-400'
     : 'bg-orange-500/20 text-orange-400'
 
+  const categoryLabel: Record<string, string> = {
+    P: 'Motor/transmisión',
+    C: 'Chasis',
+    B: 'Carrocería',
+    U: 'Red CAN',
+  }
+
   return (
-    <div className="bg-gray-900 border border-gray-800 rounded-xl p-3 space-y-2">
+    <button
+      onClick={() => openDTCInfo(dtc.code)}
+      className="w-full bg-gray-900 border border-gray-800 rounded-xl p-3 space-y-2 text-left active:bg-gray-800 transition-colors"
+    >
       <div className="flex items-center justify-between">
         <span className="font-mono font-bold text-white text-base">{dtc.code}</span>
-        <span className={`text-xs px-2 py-0.5 rounded-full ${badgeColor}`}>{badge}</span>
+        <div className="flex items-center gap-2">
+          <span className={`text-xs px-2 py-0.5 rounded-full ${badgeColor}`}>{badge}</span>
+          <span className="text-gray-600 text-xs">🔗 Info</span>
+        </div>
       </div>
       <p className="text-gray-300 text-sm">{dtc.descriptionEs || dtc.description}</p>
-      {dtc.descriptionEs && dtc.description !== dtc.descriptionEs && (
-        <p className="text-gray-600 text-xs italic">{dtc.description}</p>
+      <p className="text-gray-600 text-xs">{categoryLabel[dtc.category] ?? dtc.category} · Toca para más información</p>
+    </button>
+  )
+}
+
+function ClearedHistorySection() {
+  const { history, clearHistory } = useDTCHistoryStore()
+  const [expanded, setExpanded] = useState(false)
+
+  if (history.length === 0) return null
+
+  return (
+    <section className="space-y-2">
+      <div className="flex items-center justify-between">
+        <button
+          onClick={() => setExpanded((v) => !v)}
+          className="text-xs font-semibold text-gray-500 uppercase tracking-wider flex items-center gap-1"
+        >
+          {expanded ? '▾' : '▸'} Historial de borrados ({history.length})
+        </button>
+        <button
+          onClick={clearHistory}
+          className="text-xs text-gray-600 underline"
+        >
+          Limpiar
+        </button>
+      </div>
+
+      {expanded && (
+        <div className="space-y-3">
+          {history.map((entry, i) => (
+            <div key={i} className="bg-gray-900/50 border border-gray-800 rounded-xl p-3 space-y-2">
+              <p className="text-xs text-gray-500">
+                Borrados el {new Date(entry.clearedAt).toLocaleString('es-ES')}
+              </p>
+              <div className="flex flex-wrap gap-2">
+                {entry.codes.map((c) => (
+                  <button
+                    key={c.code}
+                    onClick={() => openDTCInfo(c.code)}
+                    className="font-mono text-xs px-2 py-1 bg-gray-800 text-yellow-400 rounded border border-gray-700"
+                  >
+                    {c.code}
+                  </button>
+                ))}
+              </div>
+            </div>
+          ))}
+        </div>
       )}
-    </div>
+    </section>
   )
 }
 
 export function DtcManager() {
   const { dtcResult, dtcLoading, connectionStatus } = useOBDStore()
   const { readDTCs, clearDTCs } = useDTC()
+  const { addEntry } = useDTCHistoryStore()
   const isConnected = connectionStatus === 'connected'
 
-  const totalDTCs = dtcResult
-    ? dtcResult.stored.length + dtcResult.pending.length + dtcResult.permanent.length
-    : 0
+  const allDTCs: DTCCodeDTO[] = dtcResult
+    ? [...dtcResult.stored, ...dtcResult.pending, ...dtcResult.permanent]
+    : []
 
   const handleClear = async () => {
-    if (window.confirm('¿Borrar todos los códigos DTC?')) {
-      await clearDTCs()
-    }
+    if (!window.confirm('¿Borrar todos los códigos DTC del vehículo?\n\nSe guardarán en el historial antes de borrarlos.')) return
+    // Save current codes to history before clearing
+    if (allDTCs.length > 0) addEntry(allDTCs)
+    await clearDTCs()
   }
 
   return (
@@ -52,13 +121,13 @@ export function DtcManager() {
         >
           {dtcLoading ? 'Leyendo...' : '🔍 Leer DTCs'}
         </button>
-        {dtcResult && totalDTCs > 0 && (
+        {dtcResult && allDTCs.length > 0 && (
           <button
             onClick={handleClear}
             disabled={!isConnected}
             className="w-full min-h-[44px] py-3 bg-red-600 text-white disabled:opacity-50 rounded-lg text-sm font-medium"
           >
-            🗑 Borrar DTCs
+            🗑 Borrar DTCs del vehículo
           </button>
         )}
       </div>
@@ -78,7 +147,7 @@ export function DtcManager() {
               {dtcResult.milOn ? 'Luz de avería ENCENDIDA' : 'Sin averías activas'}
             </p>
             <p className="text-gray-500 text-xs">
-              {totalDTCs} código(s) encontrado(s)
+              {allDTCs.length} código(s) encontrado(s)
               {dtcResult.incompleteTests > 0 && (
                 <span className="ml-2 text-yellow-500">
                   · {dtcResult.incompleteTests} test(s) incompleto(s)
@@ -99,7 +168,7 @@ export function DtcManager() {
               </h2>
               <div className="space-y-2">
                 {dtcResult.stored.map((d) => (
-                  <DTCCard key={d.code} dtc={d} />
+                  <DTCCard key={d.code + d.isPending} dtc={d} />
                 ))}
               </div>
             </section>
@@ -111,7 +180,7 @@ export function DtcManager() {
               </h2>
               <div className="space-y-2">
                 {dtcResult.pending.map((d) => (
-                  <DTCCard key={d.code} dtc={d} />
+                  <DTCCard key={d.code + d.isPending} dtc={d} />
                 ))}
               </div>
             </section>
@@ -123,12 +192,12 @@ export function DtcManager() {
               </h2>
               <div className="space-y-2">
                 {dtcResult.permanent.map((d) => (
-                  <DTCCard key={d.code} dtc={d} />
+                  <DTCCard key={d.code + d.isPending} dtc={d} />
                 ))}
               </div>
             </section>
           )}
-          {totalDTCs === 0 && (
+          {allDTCs.length === 0 && (
             <div className="text-center py-10 text-gray-500 text-sm">
               No se encontraron códigos DTC
             </div>
@@ -143,6 +212,9 @@ export function DtcManager() {
           </p>
         </div>
       )}
+
+      {/* Cleared DTCs history */}
+      <ClearedHistorySection />
     </div>
   )
 }
