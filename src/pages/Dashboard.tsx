@@ -1,6 +1,6 @@
 import { useEffect } from 'react'
 import { useOBDStore } from '../store/obdStore'
-import { SensorCard } from '../components/dashboard/SensorCard'
+import { GaugeCard } from '../components/dashboard/GaugeCard'
 import { useLiveData } from '../hooks/useLiveData'
 
 const DASHBOARD_PIDS = [
@@ -20,7 +20,6 @@ export function Dashboard() {
 
   const isConnected = connectionStatus === 'connected'
 
-  // Auto-start polling when we connect
   useEffect(() => {
     if (isConnected && !isPolling) {
       startPolling(DASHBOARD_PIDS.map((p) => p.pid))
@@ -63,7 +62,7 @@ export function Dashboard() {
           {DASHBOARD_PIDS.map(({ pid, name, unit, min, max }) => {
             const data = liveData[pid]
             return (
-              <SensorCard
+              <GaugeCard
                 key={pid}
                 pid={pid}
                 name={name}
@@ -71,6 +70,7 @@ export function Dashboard() {
                 unit={unit}
                 min={min}
                 max={max}
+                hasData={data !== undefined}
               />
             )
           })}
