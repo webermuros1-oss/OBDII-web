@@ -340,7 +340,7 @@ class OBDPlugin : Plugin() {
         val initCommands = listOf(
             "ATE0",   // Echo off
             "ATL0",   // Linefeeds off
-            "ATS0",   // Spaces off  (makes parsing easier)
+            "ATS1",   // Spaces on   (required to parse byte boundaries in CAN responses)
             "ATH1",   // Headers on  (we need mode byte to validate responses)
             "ATSP0"   // Auto-select OBD protocol
         )
@@ -394,9 +394,8 @@ class OBDPlugin : Plugin() {
     private fun parsePIDResponse(pid: String, raw: String): JSObject? {
         val info = PID_TABLE[pid.uppercase()] ?: return null
 
-        // Expected pattern with headers on (ATH1): "41 {pid} {A} {B?} ..."
-        // or without headers (ATS0 removes spaces between bytes but ATH1 adds mode/pid prefix)
-        // We normalise by stripping non-hex, splitting into byte tokens
+        // Expected pattern with ATH1+ATS1: "7E8 04 41 {pid} {A} {B?} ..."
+        // ATS1 ensures spaces between bytes so we can locate "41 XX" and extract data bytes.
         val cleaned = raw
             .replace("\r", " ")
             .replace("\n", " ")

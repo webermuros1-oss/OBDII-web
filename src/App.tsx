@@ -6,11 +6,9 @@ import { DtcManager } from './pages/DtcManager'
 import { SessionHistory } from './pages/SessionHistory'
 import { VehicleInfo } from './pages/VehicleInfo'
 import { useOBDConnection } from './hooks/useOBDConnection'
-import { useLiveData } from './hooks/useLiveData'
 
 function AppContent() {
   useOBDConnection()
-  useLiveData()
 
   return (
     <Layout>
