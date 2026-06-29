@@ -8,6 +8,20 @@
   </head>
   <body>
     <div id="root"></div>
+    <div id="crash-overlay" style="display:none;position:fixed;inset:0;background:#1a0000;color:#ff6b6b;font-family:monospace;font-size:13px;padding:20px;z-index:99999;overflow:auto;white-space:pre-wrap;"></div>
+    <script>
+      function showCrash(msg) {
+        var el = document.getElementById('crash-overlay');
+        if (el) { el.style.display = 'block'; el.textContent += msg + '\n'; }
+      }
+      window.onerror = function(msg, src, line, col, err) {
+        showCrash('ERROR: ' + msg + '\nAt: ' + src + ':' + line + ':' + col + '\n' + (err ? err.stack : ''));
+        return false;
+      };
+      window.addEventListener('unhandledrejection', function(e) {
+        showCrash('PROMISE REJECTION: ' + (e.reason ? (e.reason.stack || e.reason) : 'unknown'));
+      });
+    </script>
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>

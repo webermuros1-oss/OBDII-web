@@ -8,5 +8,9 @@ import { initDatabase } from './db-bridge'
  * mostrar una pantalla de error en lugar de silenciar el problema.
  */
 export async function setupDatabase(): Promise<void> {
-  await initDatabase()
+  try {
+    await initDatabase()
+  } catch (err) {
+    console.warn('[DB] SQLite init failed, running without database:', err)
+  }
 }
