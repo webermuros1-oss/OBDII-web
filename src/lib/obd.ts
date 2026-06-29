@@ -9,7 +9,10 @@
  *  - Delegates session persistence to db-bridge (created by another agent).
  */
 
+import { Capacitor } from '@capacitor/core'
 import { OBDNative } from '../capacitor/obd-plugin'
+
+const isNative = Capacitor.isNativePlatform()
 import {
   getSessions as dbGetSessions,
   getSession as dbGetSession,
@@ -294,7 +297,8 @@ const obdBridge: OBDAPI = {
 
   // ── onConnectionStatus ────────────────────────────────────────────────────
   onConnectionStatus(cb: (status: ConnectionStatus) => void): () => void {
-    // Remove previous listener for this event if any
+    if (!isNative) return () => {}
+
     handles.connectionStatus?.remove()
     handles.connectionStatus = null
 
@@ -303,12 +307,9 @@ const obdBridge: OBDAPI = {
     OBDNative.addListener('connectionStatus', (data: { status: string }) => {
       if (!removed) cb(data.status as ConnectionStatus)
     }).then((handle: ListenerHandle) => {
-      if (removed) {
-        handle.remove()
-      } else {
-        handles.connectionStatus = handle
-      }
-    })
+      if (removed) handle.remove()
+      else handles.connectionStatus = handle
+    }).catch(() => {})
 
     return () => {
       removed = true
@@ -344,6 +345,8 @@ const obdBridge: OBDAPI = {
 
   // ── onLiveData ────────────────────────────────────────────────────────────
   onLiveData(cb: (data: LiveDataDTO) => void): () => void {
+    if (!isNative) return () => {}
+
     handles.liveData?.remove()
     handles.liveData = null
 
@@ -352,12 +355,9 @@ const obdBridge: OBDAPI = {
     OBDNative.addListener('liveData', (data: unknown) => {
       if (!removed) cb(data as LiveDataDTO)
     }).then((handle: ListenerHandle) => {
-      if (removed) {
-        handle.remove()
-      } else {
-        handles.liveData = handle
-      }
-    })
+      if (removed) handle.remove()
+      else handles.liveData = handle
+    }).catch(() => {})
 
     return () => {
       removed = true
@@ -368,6 +368,8 @@ const obdBridge: OBDAPI = {
 
   // ── onOBDError ────────────────────────────────────────────────────────────
   onOBDError(cb: (err: OBDError) => void): () => void {
+    if (!isNative) return () => {}
+
     handles.obdError?.remove()
     handles.obdError = null
 
@@ -379,12 +381,9 @@ const obdBridge: OBDAPI = {
         cb(obdError(payload.code as ErrorCode, payload.message))
       }
     }).then((handle: ListenerHandle) => {
-      if (removed) {
-        handle.remove()
-      } else {
-        handles.obdError = handle
-      }
-    })
+      if (removed) handle.remove()
+      else handles.obdError = handle
+    }).catch(() => {})
 
     return () => {
       removed = true
