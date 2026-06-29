@@ -1,3 +1,4 @@
+import { useEffect } from 'react'
 import { useOBDStore } from '../store/obdStore'
 import { SensorCard } from '../components/dashboard/SensorCard'
 import { useLiveData } from '../hooks/useLiveData'
@@ -18,6 +19,16 @@ export function Dashboard() {
   const { startPolling, stopPolling } = useLiveData()
 
   const isConnected = connectionStatus === 'connected'
+
+  // Auto-start polling when we connect
+  useEffect(() => {
+    if (isConnected && !isPolling) {
+      startPolling(DASHBOARD_PIDS.map((p) => p.pid))
+    }
+    if (!isConnected && isPolling) {
+      stopPolling()
+    }
+  }, [isConnected])
 
   return (
     <div className="space-y-4">

@@ -6,7 +6,7 @@ export function SessionHistory() {
   const { sessions, setSessions } = useOBDStore()
 
   useEffect(() => {
-    obd.listSessions().then((r) => {
+    obd.getSessions().then((r) => {
       if (r.ok) setSessions(r.data)
     })
   }, [])
