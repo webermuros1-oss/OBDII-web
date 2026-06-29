@@ -3,6 +3,7 @@ import { useOBDStore } from '../store/obdStore'
 import { useVehicleProfileStore } from '../store/vehicleProfileStore'
 import type { VehicleProfile } from '../store/vehicleProfileStore'
 import { obd } from '../lib/obd'
+import { decodeVINfromNHTSA } from '../lib/vin-decoder'
 
 const FUEL_OPTIONS: VehicleProfile['fuel'][] = ['Gasolina', 'Diésel', 'Híbrido', 'Eléctrico']
 
@@ -231,22 +232,62 @@ export function VehicleInfo() {
   const { vehicleInfo, setVehicleInfo, connectionStatus } = useOBDStore()
   const { getActiveProfile, setProfile } = useVehicleProfileStore()
   const [loading, setLoading] = useState(false)
+  const [nhtsaLoading, setNhtsaLoading] = useState(false)
   const isConnected = connectionStatus === 'connected'
 
   const loadInfo = async () => {
     setLoading(true)
     const result = await obd.getVehicleInfo()
     setLoading(false)
-    if (result.ok) {
-      setVehicleInfo(result.data)
-      const activeProfile = getActiveProfile()
-      if (result.data.manufacturer && (!activeProfile || !activeProfile.make)) {
-        setProfile({ make: result.data.manufacturer })
+
+    if (!result.ok) return
+    setVehicleInfo(result.data)
+
+    const data = result.data
+    const activeProfile = getActiveProfile()
+    const updates: Partial<Omit<VehicleProfile, 'id'>> = {}
+
+    // WMI-based manufacturer (instant, no network)
+    if (data.manufacturer && !activeProfile?.make) {
+      updates.make = data.manufacturer
+    }
+    // PID 51 fuel type is authoritative — always apply if ECU reports it
+    if (data.fuelType) {
+      updates.fuel = data.fuelType
+    }
+    if (Object.keys(updates).length > 0) setProfile(updates)
+
+    // NHTSA API for model, year, engine (needs VIN + internet)
+    const vin = data.vin
+    if (vin && vin !== 'UNKNOWN') {
+      setNhtsaLoading(true)
+      const decoded = await decodeVINfromNHTSA(vin)
+      setNhtsaLoading(false)
+
+      if (decoded) {
+        const current = getActiveProfile()
+        const nhtsaUpdates: Partial<Omit<VehicleProfile, 'id'>> = {}
+
+        if (decoded.make && !current?.make) nhtsaUpdates.make = decoded.make
+        if (decoded.model && !current?.model) nhtsaUpdates.model = decoded.model
+        if (decoded.year && !current?.year) nhtsaUpdates.year = decoded.year
+        if (decoded.engine && !current?.engine) nhtsaUpdates.engine = decoded.engine
+        // NHTSA fuel only if PID 51 didn't provide one (don't check current?.fuel
+        // as the default 'Gasolina' would block a diesel car getting corrected)
+        if (decoded.fuel && !data.fuelType) nhtsaUpdates.fuel = decoded.fuel
+
+        if (Object.keys(nhtsaUpdates).length > 0) setProfile(nhtsaUpdates)
       }
     }
   }
 
   const vinClean = vehicleInfo?.vin && vehicleInfo.vin !== 'UNKNOWN' ? vehicleInfo.vin : null
+
+  const statusText = nhtsaLoading
+    ? 'Consultando base de datos NHTSA...'
+    : loading
+    ? 'Leyendo datos del coche...'
+    : '🔍 Leer datos OBD del vehículo'
 
   return (
     <div className="space-y-4">
@@ -256,10 +297,10 @@ export function VehicleInfo() {
       {/* OBD read button */}
       <button
         onClick={loadInfo}
-        disabled={!isConnected || loading}
+        disabled={!isConnected || loading || nhtsaLoading}
         className="w-full min-h-[44px] py-3 bg-blue-600/20 text-blue-400 disabled:opacity-50 rounded-lg text-sm font-medium"
       >
-        {loading ? 'Leyendo datos del coche...' : '🔍 Leer datos OBD del vehículo'}
+        {statusText}
       </button>
 
       {!isConnected && (
