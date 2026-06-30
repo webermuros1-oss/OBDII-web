@@ -11,6 +11,8 @@ export interface MonitorsResult {
   milOn: boolean
   dtcCount: number
   monitors: MonitorStatus[]
+  kmWithMIL: number      // PID 21 — km recorridos con la luz de avería encendida
+  kmSinceClear: number   // PID 31 — km recorridos desde el último borrado de DTCs
 }
 
 const CONTINUOUS_MONITORS = [
@@ -42,14 +44,14 @@ export async function readMonitors(): Promise<MonitorsResult> {
     const resp = await OBDNative.sendCommand({ command: '01 01\r' })
 
     if (!resp.ok || !resp.response) {
-      return { milOn: false, dtcCount: 0, monitors: [] }
+      return { milOn: false, dtcCount: 0, monitors: [], kmWithMIL: 0, kmSinceClear: 0 }
     }
 
     const tokens = parseTokens(resp.response)
     const idx = tokens.indexOf('41')
 
     if (idx < 0 || tokens[idx + 1] !== '01') {
-      return { milOn: false, dtcCount: 0, monitors: [] }
+      return { milOn: false, dtcCount: 0, monitors: [], kmWithMIL: 0, kmSinceClear: 0 }
     }
 
     const A = parseInt(tokens[idx + 2] ?? '00', 16)
@@ -81,8 +83,34 @@ export async function readMonitors(): Promise<MonitorsResult> {
       })
     }
 
-    return { milOn, dtcCount, monitors }
+    // PID 21 — Distancia recorrida con MIL encendido
+    let kmWithMIL = 0
+    try {
+      const r21 = await OBDNative.sendCommand({ command: '01 21\r' })
+      if (r21.ok && r21.response) {
+        const t21 = parseTokens(r21.response)
+        const i21 = t21.indexOf('41')
+        if (i21 >= 0 && t21[i21 + 1] === '21' && t21[i21 + 2] && t21[i21 + 3]) {
+          kmWithMIL = (parseInt(t21[i21 + 2], 16) << 8) | parseInt(t21[i21 + 3], 16)
+        }
+      }
+    } catch {}
+
+    // PID 31 — Distancia recorrida desde el borrado de DTCs
+    let kmSinceClear = 0
+    try {
+      const r31 = await OBDNative.sendCommand({ command: '01 31\r' })
+      if (r31.ok && r31.response) {
+        const t31 = parseTokens(r31.response)
+        const i31 = t31.indexOf('41')
+        if (i31 >= 0 && t31[i31 + 1] === '31' && t31[i31 + 2] && t31[i31 + 3]) {
+          kmSinceClear = (parseInt(t31[i31 + 2], 16) << 8) | parseInt(t31[i31 + 3], 16)
+        }
+      }
+    } catch {}
+
+    return { milOn, dtcCount, monitors, kmWithMIL, kmSinceClear }
   } catch {
-    return { milOn: false, dtcCount: 0, monitors: [] }
+    return { milOn: false, dtcCount: 0, monitors: [], kmWithMIL: 0, kmSinceClear: 0 }
   }
 }

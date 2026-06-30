@@ -155,6 +155,54 @@ export function ITVReadiness() {
             ))}
           </div>
 
+          {/* Kilometraje diagnóstico — PIDs 21 + 31 */}
+          <div className="bg-gray-900 border border-gray-800 rounded-xl p-4 space-y-4">
+            <h2 className="text-xs text-gray-400 uppercase tracking-wider font-semibold">
+              Kilometraje diagnóstico
+            </h2>
+
+            {/* PID 31 — km desde borrado con barra de progreso */}
+            <div className="space-y-1.5">
+              <div className="flex items-center justify-between">
+                <span className="text-sm text-gray-300">Km desde borrado de DTCs</span>
+                <span className="text-sm font-mono font-semibold text-gray-100">
+                  {result.kmSinceClear.toLocaleString('es-ES')} km
+                </span>
+              </div>
+              <div className="h-2.5 bg-gray-800 rounded-full overflow-hidden">
+                <div
+                  className={`h-full rounded-full transition-all duration-500 ${
+                    result.kmSinceClear >= 100 ? 'bg-green-500' : 'bg-yellow-400'
+                  }`}
+                  style={{ width: `${Math.min(100, (result.kmSinceClear / 100) * 100)}%` }}
+                />
+              </div>
+              <p className="text-xs text-gray-600">
+                {result.kmSinceClear >= 100
+                  ? '✓ Suficiente kilometraje para que todos los monitores se completen'
+                  : `${100 - result.kmSinceClear} km más recomendados para completar los monitores`}
+              </p>
+            </div>
+
+            {/* PID 21 — km con MIL encendido */}
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm text-gray-300">Km con avería activa (MIL)</p>
+                <p className="text-xs text-gray-600 mt-0.5">
+                  {result.kmWithMIL === 0 ? 'Sin km registrados con la luz de avería' : 'La ECU registró conducción con avería activa'}
+                </p>
+              </div>
+              <span
+                className={`text-sm font-mono font-semibold ml-3 shrink-0 ${
+                  result.kmWithMIL === 0 ? 'text-green-400' : 'text-red-400'
+                }`}
+              >
+                {result.kmWithMIL.toLocaleString('es-ES')} km
+                {result.kmWithMIL > 0 && ' ⚠️'}
+              </span>
+            </div>
+          </div>
+
           {/* Info footer */}
           <div className="bg-gray-900/50 border border-gray-800 rounded-xl p-3 space-y-1.5">
             <p className="text-xs text-gray-400">

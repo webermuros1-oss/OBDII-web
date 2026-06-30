@@ -2,7 +2,8 @@ import { useState } from 'react'
 import { useOBDStore } from '../store/obdStore'
 import { useDTCHistoryStore } from '../store/dtcHistoryStore'
 import { useDTC } from '../hooks/useDTC'
-import type { DTCCodeDTO } from '../types/obd'
+import { obd } from '../lib/obd'
+import type { DTCCodeDTO, FreezeFrameEntryDTO } from '../types/obd'
 
 function openDTCInfo(code: string) {
   // Opens the system browser with DTC info; _system forces external browser in Capacitor
@@ -39,6 +40,81 @@ function DTCCard({ dtc }: { dtc: DTCCodeDTO }) {
       <p className="text-gray-300 text-sm">{dtc.descriptionEs || dtc.description}</p>
       <p className="text-gray-600 text-xs">{categoryLabel[dtc.category] ?? dtc.category} · Toca para más información</p>
     </button>
+  )
+}
+
+function formatFreezeValue(entry: FreezeFrameEntryDTO): string {
+  const v = entry.value
+  if (entry.pid === '0C') return Math.round(v).toString()
+  if (['04', '11'].includes(entry.pid)) return Math.round(v) + '%'
+  if (['06', '07'].includes(entry.pid)) return (v >= 0 ? '+' : '') + v.toFixed(1) + '%'
+  if (entry.pid === '10') return v.toFixed(2)
+  return Number.isInteger(v) ? v.toString() : v.toFixed(1)
+}
+
+function FreezeFrameSection({ isConnected }: { isConnected: boolean }) {
+  const [loading, setLoading] = useState(false)
+  const [entries, setEntries] = useState<FreezeFrameEntryDTO[] | null>(null)
+  const [error, setError] = useState<string | null>(null)
+  const [expanded, setExpanded] = useState(false)
+
+  const handleRead = async () => {
+    setLoading(true)
+    setError(null)
+    const result = await obd.readFreezeFrame()
+    setLoading(false)
+    if (!result.ok) {
+      setError('No se pudo leer la instantánea')
+      return
+    }
+    if (result.data.entries.length === 0) {
+      setError('El vehículo no tiene datos de instantánea disponibles')
+      return
+    }
+    setEntries(result.data.entries)
+    setExpanded(true)
+  }
+
+  return (
+    <section className="space-y-2">
+      <div className="flex items-center justify-between">
+        <button
+          onClick={() => setExpanded((v) => !v)}
+          className="text-xs font-semibold text-gray-500 uppercase tracking-wider flex items-center gap-1"
+        >
+          {expanded ? '▾' : '▸'} Instantánea del fallo (Freeze Frame)
+        </button>
+        <button
+          onClick={handleRead}
+          disabled={!isConnected || loading}
+          className="text-xs px-2.5 py-1 rounded-lg bg-purple-600/20 text-purple-400 disabled:opacity-40"
+        >
+          {loading ? 'Leyendo...' : '📸 Leer'}
+        </button>
+      </div>
+
+      {error && (
+        <p className="text-xs text-gray-600 pl-3">{error}</p>
+      )}
+
+      {expanded && entries && entries.length > 0 && (
+        <div className="bg-gray-900 border border-purple-500/20 rounded-xl p-3 space-y-2">
+          <p className="text-[10px] text-purple-400 uppercase tracking-wider font-semibold">
+            Valores registrados en el momento del fallo
+          </p>
+          <div className="grid grid-cols-2 gap-x-4 gap-y-2">
+            {entries.map((e) => (
+              <div key={e.pid} className="flex items-center justify-between">
+                <span className="text-xs text-gray-400 truncate">{e.name}</span>
+                <span className="text-xs font-mono text-gray-100 ml-1 shrink-0">
+                  {formatFreezeValue(e)} <span className="text-gray-600">{e.unit}</span>
+                </span>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+    </section>
   )
 }
 
@@ -211,6 +287,11 @@ export function DtcManager() {
               : 'Conecta el ELM327 para leer los DTCs'}
           </p>
         </div>
+      )}
+
+      {/* Freeze Frame — solo visible cuando hay DTCs almacenados */}
+      {dtcResult && dtcResult.stored.length > 0 && (
+        <FreezeFrameSection isConnected={isConnected} />
       )}
 
       {/* Cleared DTCs history */}

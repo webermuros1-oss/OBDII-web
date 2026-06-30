@@ -7,6 +7,8 @@ import { SessionHistory } from './pages/SessionHistory'
 import { VehicleInfo } from './pages/VehicleInfo'
 import { ITVReadiness } from './pages/ITVReadiness'
 import { DiagnosticReport } from './pages/DiagnosticReport'
+import { Performance } from './pages/Performance'
+import { QuickScan } from './pages/QuickScan'
 import { useOBDConnection } from './hooks/useOBDConnection'
 
 function AppContent() {
@@ -21,6 +23,8 @@ function AppContent() {
         <Route path="/dtc" element={<DtcManager />} />
         <Route path="/itv" element={<ITVReadiness />} />
         <Route path="/report" element={<DiagnosticReport />} />
+        <Route path="/performance" element={<Performance />} />
+        <Route path="/quickscan" element={<QuickScan />} />
         <Route path="/history" element={<SessionHistory />} />
         <Route path="/vehicle" element={<VehicleInfo />} />
       </Routes>

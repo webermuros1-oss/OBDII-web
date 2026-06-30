@@ -79,6 +79,19 @@ export interface VehicleInfoDTO {
   fuelType?: 'Gasolina' | 'Diésel' | 'Híbrido' | 'Eléctrico'
 }
 
+// ─── DTOs de Freeze Frame ────────────────────────────────────────────────────
+export interface FreezeFrameEntryDTO {
+  pid: string
+  name: string
+  value: number
+  unit: string
+}
+
+export interface FreezeFrameDTO {
+  frameNumber: number
+  entries: FreezeFrameEntryDTO[]
+}
+
 // ─── DTOs de Sesión ──────────────────────────────────────────────────────────
 export interface SessionDTO {
   id: number
@@ -122,6 +135,9 @@ export interface OBDAPI {
 
   // Vehículo
   getVehicleInfo(): Promise<Result<VehicleInfoDTO>>
+
+  // Freeze Frame (Modo 02)
+  readFreezeFrame(): Promise<Result<FreezeFrameDTO>>
 
   // Historial
   getSessions(): Promise<Result<SessionDTO[]>>

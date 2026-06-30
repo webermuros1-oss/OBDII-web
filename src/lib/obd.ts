@@ -25,6 +25,8 @@ import type {
   LiveDataDTO,
   DTCResultDTO,
   VehicleInfoDTO,
+  FreezeFrameDTO,
+  FreezeFrameEntryDTO,
   SessionDTO,
   SessionDetailDTO,
 } from '../types/obd'
@@ -321,6 +323,62 @@ const obdBridge: OBDAPI = {
     } catch (e) {
       const msg = e instanceof Error ? e.message : String(e)
       return fail('PARSE_ERROR', `getVehicleInfo failed: ${msg}`)
+    }
+  },
+
+  // ── readFreezeFrame ───────────────────────────────────────────────────────
+  async readFreezeFrame(): Promise<Result<FreezeFrameDTO>> {
+    type PIDDef = {
+      pid: string
+      name: string
+      unit: string
+      parse: (bytes: string[]) => number
+    }
+    const PIDS: PIDDef[] = [
+      { pid: '04', name: 'Carga del motor',       unit: '%',   parse: (b) => (parseInt(b[0], 16) / 255) * 100 },
+      { pid: '05', name: 'Temp. refrigerante',    unit: '°C',  parse: (b) => parseInt(b[0], 16) - 40 },
+      { pid: '0B', name: 'Presión admisión',      unit: 'kPa', parse: (b) => parseInt(b[0], 16) },
+      { pid: '0C', name: 'RPM',                   unit: 'rpm', parse: (b) => ((parseInt(b[0], 16) << 8) | parseInt(b[1], 16)) / 4 },
+      { pid: '0D', name: 'Velocidad',             unit: 'km/h',parse: (b) => parseInt(b[0], 16) },
+      { pid: '0F', name: 'Temp. admisión',        unit: '°C',  parse: (b) => parseInt(b[0], 16) - 40 },
+      { pid: '10', name: 'Flujo aire (MAF)',      unit: 'g/s', parse: (b) => ((parseInt(b[0], 16) << 8) | parseInt(b[1], 16)) / 100 },
+      { pid: '11', name: 'Acelerador',            unit: '%',   parse: (b) => (parseInt(b[0], 16) / 255) * 100 },
+      { pid: '06', name: 'Trim combustible corto',unit: '%',   parse: (b) => (parseInt(b[0], 16) / 128 - 1) * 100 },
+      { pid: '07', name: 'Trim combustible largo',unit: '%',   parse: (b) => (parseInt(b[0], 16) / 128 - 1) * 100 },
+    ]
+
+    try {
+      const entries: FreezeFrameEntryDTO[] = []
+
+      for (const { pid, name, unit, parse } of PIDS) {
+        try {
+          const resp = await OBDNative.sendCommand({ command: `02 ${pid} 00\r` })
+          if (!resp.ok || !resp.response) continue
+
+          const tokens = resp.response
+            .toUpperCase()
+            .replace(/>/g, '')
+            .split(/\s+/)
+            .filter((t: string) => /^[0-9A-F]{2}$/.test(t))
+
+          // Mode 02 response: 42 [PID] [FRAME] [DATA...]
+          const idx = tokens.indexOf('42')
+          if (idx < 0 || tokens[idx + 1]?.toUpperCase() !== pid.toUpperCase()) continue
+
+          const dataBytes = tokens.slice(idx + 3) // skip 42, PID, frame number
+          if (dataBytes.length === 0 || dataBytes[0] === undefined) continue
+
+          const value = parse(dataBytes)
+          if (!isNaN(value)) entries.push({ pid, name, unit, value })
+        } catch {
+          // PID no soportado por este vehículo
+        }
+      }
+
+      return ok({ frameNumber: 0, entries })
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : String(e)
+      return fail('PARSE_ERROR', `readFreezeFrame failed: ${msg}`)
     }
   },
 

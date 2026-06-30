@@ -2,6 +2,23 @@ import { NavLink, useLocation } from 'react-router-dom'
 import { useOBDStore } from '../../store/obdStore'
 import { ConnectionPanel } from '../connection/ConnectionPanel'
 
+const PerformanceIcon = () => (
+  <svg width="22" height="22" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
+    <path d="M3 15 L6 9 L9 12 L12 6 L15 10 L17 7" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+    <circle cx="17" cy="7" r="1.5" fill="currentColor"/>
+  </svg>
+)
+
+const ScanIcon = () => (
+  <svg width="22" height="22" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
+    <rect x="3" y="3" width="5" height="5" rx="1" stroke="currentColor" strokeWidth="1.5"/>
+    <rect x="12" y="3" width="5" height="5" rx="1" stroke="currentColor" strokeWidth="1.5"/>
+    <rect x="3" y="12" width="5" height="5" rx="1" stroke="currentColor" strokeWidth="1.5"/>
+    <path d="M13 13 L17 17" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
+    <circle cx="14" cy="14" r="2.5" stroke="currentColor" strokeWidth="1.5"/>
+  </svg>
+)
+
 // SVG icons — 22x22px, inline, no external dependency
 
 const DashboardIcon = () => (
@@ -41,20 +58,13 @@ const ITVIcon = () => (
   </svg>
 )
 
-const ReportIcon = () => (
-  <svg width="22" height="22" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
-    <rect x="4" y="2" width="12" height="16" rx="2" stroke="currentColor" strokeWidth="1.5" />
-    <path d="M7 7 H13" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
-    <path d="M7 10 H13" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
-    <path d="M7 13 H10" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
-  </svg>
-)
 
 const NAV_ITEMS = [
   { to: '/dashboard', label: 'Dashboard', shortLabel: 'Dash', Icon: DashboardIcon },
   { to: '/dtc', label: 'Códigos DTC', shortLabel: 'DTC', Icon: DTCIcon },
   { to: '/itv', label: 'ITV', shortLabel: 'ITV', Icon: ITVIcon },
-  { to: '/report', label: 'Informe', shortLabel: 'Informe', Icon: ReportIcon },
+  { to: '/performance', label: 'Rendimiento', shortLabel: 'Perf', Icon: PerformanceIcon },
+  { to: '/quickscan', label: 'Análisis', shortLabel: 'Scan', Icon: ScanIcon },
   { to: '/vehicle', label: 'Vehículo', shortLabel: 'Vehículo', Icon: VehicleIcon },
 ]
 
